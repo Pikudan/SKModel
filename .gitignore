@@ -1,0 +1,38 @@
+# LaTeX временные файлы
+*.aux
+*.log
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.synctex(busy)
+*.pdf
+!main.pdf
+
+# Скомпилированные программы
+*.o
+main_seq
+main_openmp
+main_mpi
+main_hybrid
+main_mpi_cuda
+
+# Результаты выполнения
+*.out
+*.err
+*.txt
+*.csv
+solution_*
+
+# Визуализация (кроме исходных изображений)
+*.jpg
+!solution_800_1200_8_omp_*.jpg
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Резервные копии
+*~
+*.bak
+*.swp
+

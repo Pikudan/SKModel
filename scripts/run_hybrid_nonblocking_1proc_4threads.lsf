@@ -1,0 +1,17 @@
+#BSUB -n 1
+#BSUB -J "hybrid_nonblock_1p_4t"
+#BSUB -o "hybrid_nonblock_1p_4t%J.out"
+#BSUB -e "hybrid_nonblock_1p_4t%J.err"
+#BSUB -R "affinity[core(4)]"
+# Загрузка модуля OpenMPI
+module load OpenMPI/4.0.2
+# Переход в рабочую директорию
+cd $LS_SUBCWD
+# Компиляция неблокирующей версии
+mpic++ -fopenmp -O3 -o main_hybrid_nonblocking main_hybrid_nonblocking.cpp
+# Запуск с неблокирующими операциями MPI
+OMP_NUM_THREADS=4 mpirun -np 1 ./main_hybrid_nonblocking 40 40 4
+
+
+
+

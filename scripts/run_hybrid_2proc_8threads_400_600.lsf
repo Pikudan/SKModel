@@ -1,0 +1,7 @@
+#BSUB -n 2
+#BSUB -J "hybrid_2p_8t_400_600"
+#BSUB -o "hybrid_2p_8t_400_600%J.out"
+#BSUB -e "hybrid_2p_8t_400_600%J.err"
+#BSUB -R "affinity[core(8)]"
+OMP_NUM_THREADS=8 mpirun -np 2 ./main_hybrid 400 600 8
+

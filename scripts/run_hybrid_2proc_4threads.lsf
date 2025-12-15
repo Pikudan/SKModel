@@ -1,0 +1,6 @@
+#BSUB -n 2
+#BSUB -J "hybrid_2p_4t"
+#BSUB -o "hybrid_2p_4t%J.out"
+#BSUB -e "hybrid_2p_4t%J.err"
+#BSUB -R "affinity[core(4)]"
+OMP_NUM_THREADS=4 mpirun -np 2 ./main_hybrid 40 40 4

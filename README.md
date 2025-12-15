@@ -2,8 +2,6 @@
 
 Проект по курсу "Суперкомпьютерное моделирование и технологии"
 
-**Студент:** Пикуров Даниил  
-**Группа:** № 617
 
 ## Описание
 
@@ -22,9 +20,7 @@
 
 ### Отчет
 
-- `main.tex` - исходный код отчета в LaTeX
 - `main.pdf` - скомпилированный отчет
-- `logo.eps` - логотип для титульной страницы
 - `solution_800_1200_8_omp_*.jpg` - визуализация результатов
 
 ### Скрипты запуска
@@ -49,7 +45,8 @@ g++ -fopenmp -O3 -o main_openmp main_openmp.cpp
 ### MPI версия
 
 ```bash
-module load SpectrumMPI  # или OpenMPI/4.0.2
+module load SpectrumMPI
+module load OpenMPI/4.0.2
 mpic++ -O3 -o main_mpi main_mpi.cpp
 ```
 
@@ -57,7 +54,7 @@ mpic++ -O3 -o main_mpi main_mpi.cpp
 
 ```bash
 module load SpectrumMPI
-module load OpenMPI/4.0.2  # если нужно
+module load OpenMPI/4.0.2
 mpic++ -fopenmp -O3 -o main_hybrid main_hybrid.cpp
 ```
 
@@ -73,72 +70,33 @@ make ARCH=sm_35 HOST_COMP=mpicc  # для GPU с compute capability 3.5
 
 ## Запуск
 
-### Последовательная версия
-
+Последовательная версия:
 ```bash
-./main_seq M N
+./main_seq
 ```
 
-где `M` и `N` - размеры сетки по осям x и y соответственно.
-
-### OpenMP версия
-
+OpenMP версия:
 ```bash
-export OMP_NUM_THREADS=4
-./main_openmp M N
+bsub < OpenMP_openmp.lsf
 ```
 
-### MPI версия
 
+MPI версия:
 ```bash
-mpirun -np 4 ./main_mpi M N
+mpisubmit.pl -p 16 -w 00:05 ./main_mpi -- 400 600
 ```
 
-### Гибридная MPI+OpenMP версия
-
+Гибридная версия (MPI+OpenMP):
 ```bash
-export OMP_NUM_THREADS=4
-mpirun -np 2 ./main_hybrid M N 4
+bsub < OpenMP_hybrid.lsf
 ```
 
-где последний аргумент - число потоков OpenMP на процесс.
 
 ### MPI+CUDA версия
 
 ```bash
-mpirun -np 2 ./main_mpi_cuda M N
-```
-
-## Запуск на кластере IBM Polus
-
-### Использование LSF скриптов
-
-```bash
-bsub < scripts/run_hybrid_4proc_4threads_800_1200.lsf
-bsub < scripts/run_mpi_cuda_2gpu_2400_3600.lsf
-```
-
-### Использование mpisubmit.pl для MPI+CUDA
-
-Для запуска MPI+CUDA программы можно использовать утилиту `mpisubmit.pl`:
-
-```bash
 mpisubmit.pl -p 2 --gpu 2 00:05 ./main_mpi_cuda -- 2400 3600
 ```
-
-Или использовать готовый скрипт:
-
-```bash
-./scripts/run_mpi_cuda_2gpu_2400_3600.sh
-```
-
-Параметры:
-- `-p 2` - количество MPI процессов
-- `--gpu 2` - количество GPU
-- `00:05` - время выполнения (5 минут)
-- `./main_mpi_cuda` - исполняемый файл
-- `-- 2400 3600` - аргументы программы (размеры сетки)
-
 ## Структура Git-репозитория
 
 Проект организован с использованием веток Git для разделения различных реализаций:
@@ -163,48 +121,10 @@ mpisubmit.pl -p 2 --gpu 2 00:05 ./main_mpi_cuda -- 2400 3600
 - **`mpi-cuda`** - MPI+CUDA реализация
   - Содержит: `main_seq.cpp`, `main_mpi_cuda.cpp`, `Makefile`, отчет
 
-### Переключение между ветками:
 
-```bash
-git checkout main          # переключиться на основную ветку
-git checkout sequential    # переключиться на последовательную реализацию
-git checkout openmp        # переключиться на OpenMP реализацию
-git checkout mpi           # переключиться на MPI реализацию
-git checkout hybrid        # переключиться на гибридную реализацию
-git checkout mpi-cuda      # переключиться на MPI+CUDA реализацию
-```
 
-### История коммитов:
-
-История коммитов отражает процесс разработки и оптимизации на каждом этапе:
-1. Начальная последовательная реализация
-2. Добавление OpenMP директив
-3. Реализация MPI версии с двумерной декомпозицией
-4. Разработка гибридной MPI+OpenMP версии
-5. Реализация MPI+CUDA версии с использованием GPU
-6. Оптимизация и улучшение производительности на каждом этапе
 
 ## Результаты
 
 Детальные результаты измерений производительности представлены в отчете `main.pdf`.
-
-### Примеры результатов для сетки 2400×3600:
-
-- Последовательная программа: 2939.49 с
-- OpenMP (20 потоков): 431.988 с (ускорение 6.81)
-- MPI+OpenMP (20 процессов, 8 потоков): 255.755 с (ускорение 11.49)
-- MPI+CUDA (1 процесс): 822.745 с (ускорение 3.57)
-- MPI+CUDA (2 процесса): 419.607 с (ускорение 7.01)
-
-## Требования
-
-- Компилятор C++ с поддержкой C++11
-- OpenMP (для OpenMP и гибридной версий)
-- MPI (для MPI, гибридной и MPI+CUDA версий)
-- CUDA Toolkit (для MPI+CUDA версии)
-- GPU с compute capability >= 3.5 (для MPI+CUDA версии)
-
-## Лицензия
-
-Учебный проект.
 

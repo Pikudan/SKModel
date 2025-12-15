@@ -25,8 +25,8 @@
 
 ### Скрипты запуска
 
-- `scripts/run_hybrid_*.lsf` - скрипты для запуска гибридной версии на кластере IBM Polus
-- `scripts/run_mpi_cuda_*.lsf` - скрипты для запуска MPI+CUDA версии на кластере IBM Polus
+- `OpenMP_openmp.lsf` - скрипт для запуска OpenMP версии на кластере IBM Polus
+- `OpenMP_hybrid.lsf` - скрипт для запуска гибридной MPI+OpenMP версии на кластере IBM Polus
 
 ## Компиляция
 
@@ -104,7 +104,7 @@ mpisubmit.pl -p 2 --gpu 2 00:05 ./main_mpi_cuda -- 2400 3600
 ### Ветки репозитория:
 
 - **`main`** - основная ветка с финальными версиями всех реализаций и готовым отчетом (`main.pdf`)
-  - Содержит: `main_seq.cpp`, `main_openmp.cpp`, `main_mpi.cpp`, `main_hybrid.cpp`, `main_mpi_cuda.cpp`, `Makefile`, `main.tex`, `main.pdf`, все скрипты запуска
+  - Содержит: `main_seq.cpp`, `main_openmp.cpp`, `main_mpi.cpp`, `main_hybrid.cpp`, `main_mpi_cuda.cpp`, `Makefile`, `main.tex`, `main.pdf`, скрипты запуска (`OpenMP_openmp.lsf`, `OpenMP_hybrid.lsf`)
 
 - **`sequential`** - последовательная реализация
   - Содержит: `main_seq.cpp`, отчет (`main.tex`, `main.pdf`)

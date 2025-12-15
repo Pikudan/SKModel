@@ -5,7 +5,7 @@
 *.fls
 *.synctex.gz
 *.synctex(busy)
-*.pdf
+# Разрешаем main.pdf (готовый отчет)
 !main.pdf
 
 # Скомпилированные программы

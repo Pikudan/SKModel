@@ -111,12 +111,33 @@ mpirun -np 2 ./main_mpi_cuda M N
 
 ## Запуск на кластере IBM Polus
 
-Используйте LSF скрипты для запуска на кластере:
+### Использование LSF скриптов
 
 ```bash
 bsub < scripts/run_hybrid_4proc_4threads_800_1200.lsf
 bsub < scripts/run_mpi_cuda_2gpu_2400_3600.lsf
 ```
+
+### Использование mpisubmit.pl для MPI+CUDA
+
+Для запуска MPI+CUDA программы можно использовать утилиту `mpisubmit.pl`:
+
+```bash
+mpisubmit.pl -p 2 --gpu 2 00:05 ./main_mpi_cuda -- 2400 3600
+```
+
+Или использовать готовый скрипт:
+
+```bash
+./scripts/run_mpi_cuda_2gpu_2400_3600.sh
+```
+
+Параметры:
+- `-p 2` - количество MPI процессов
+- `--gpu 2` - количество GPU
+- `00:05` - время выполнения (5 минут)
+- `./main_mpi_cuda` - исполняемый файл
+- `-- 2400 3600` - аргументы программы (размеры сетки)
 
 ## Структура Git-репозитория
 

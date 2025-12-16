@@ -1,7 +1,9 @@
 ARCH ?= sm_35
-
-HOST_COMP ?= mpicc
-
+export OMPI_CC=gcc
+export OMPI_CXX=g++
+export MPICC_CC=gcc
+export MPICXX_CXX=g++
+HOST_COMP ?= mpicxx
 
 NVCC = nvcc
 
@@ -19,9 +21,7 @@ CUDA_SRC = main_mpi_cuda.cpp
 CUDA_OBJ = main_mpi_cuda.o
 CUDA_EXEC = main_mpi_cuda
 
-
 all: $(CUDA_EXEC)
-
 
 $(CUDA_EXEC): $(CUDA_OBJ)
 	$(NVCC) $(NVCC_FLAGS) -o $@ $< $(CUDA_LIBS) -ccbin $(HOST_COMP)
@@ -33,4 +33,5 @@ clean:
 	rm -f $(CUDA_OBJ) $(CUDA_EXEC) *.o
 
 .PHONY: all clean
+
 

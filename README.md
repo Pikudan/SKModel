@@ -95,11 +95,9 @@ bsub < OpenMP_hybrid.lsf
 ### MPI+CUDA версия
 
 ```bash
-mpisubmit.pl -p 2 --gpu 2 00:05 ./main_mpi_cuda -- 2400 3600
+mpisubmit.pl -p 2 --gpu 2 -w 00:05 ./main_mpi_cuda -- 2400 3600
 ```
 ## Структура Git-репозитория
-
-Проект организован с использованием веток Git для разделения различных реализаций:
 
 ### Ветки репозитория:
 

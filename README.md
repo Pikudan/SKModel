@@ -37,6 +37,5 @@ mpic++ -fopenmp -O3 -o main_hybrid main_hybrid.cpp
 ### Гибридная MPI+OpenMP версия
 
 ```bash
-export OMP_NUM_THREADS=4
-mpirun -np 2 ./main_hybrid M N 4
+bsub < OpenMP_hybrid.lsf
 ```

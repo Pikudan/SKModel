@@ -1,0 +1,6 @@
+#BSUB -n 4
+#BSUB -J "hybrid"
+#BSUB -o "hybrid%J.out"
+#BSUB -e "hybrid%J.err"
+#BSUB -R "affinity[core(8)]"
+OMP_NUM_THREADS=8 mpiexec -np 4 ./main_hybrid 800 1200 8

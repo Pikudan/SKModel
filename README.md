@@ -20,7 +20,7 @@
 
 ### Отчет
 
-- `main.pdf` - скомпилированный отчет
+- `main.pdf` - отчет
 - `solution_800_1200_8_omp_*.jpg` - визуализация результатов
 
 ### Скрипты запуска
@@ -102,22 +102,22 @@ mpisubmit.pl -p 2 --gpu 2 -w 00:05 ./main_mpi_cuda -- 2400 3600
 ### Ветки репозитория:
 
 - **`main`** - основная ветка с финальными версиями всех реализаций и готовым отчетом (`main.pdf`)
-  - Содержит: `main_seq.cpp`, `main_openmp.cpp`, `main_mpi.cpp`, `main_hybrid.cpp`, `main_mpi_cuda.cpp`, `Makefile`, `main.tex`, `main.pdf`, скрипты запуска (`OpenMP_openmp.lsf`, `OpenMP_hybrid.lsf`)
+  - Содержит: `main_seq.cpp`, `main_openmp.cpp`, `main_mpi.cpp`, `main_hybrid.cpp`, `main_mpi_cuda.cpp`, `Makefile`, `main.pdf`, скрипты запуска (`OpenMP_openmp.lsf`, `OpenMP_hybrid.lsf`)
 
 - **`sequential`** - последовательная реализация
-  - Содержит: `main_seq.cpp`, отчет (`main.tex`, `main.pdf`)
+  - Содержит: `main_seq.cpp`
 
 - **`openmp`** - OpenMP реализация
-  - Содержит: `main_seq.cpp`, `main_openmp.cpp`, отчет
+  - Содержит: `main_openmp.cpp`
 
 - **`mpi`** - MPI реализация
-  - Содержит: `main_seq.cpp`, `main_mpi.cpp`, отчет
+  - Содержит: `main_mpi.cpp`
 
 - **`hybrid`** - гибридная MPI+OpenMP реализация
-  - Содержит: `main_seq.cpp`, `main_hybrid.cpp`, отчет
+  - Содержит: `main_hybrid.cpp`
 
 - **`mpi-cuda`** - MPI+CUDA реализация
-  - Содержит: `main_seq.cpp`, `main_mpi_cuda.cpp`, `Makefile`, отчет
+  - Содержит: `main_mpi_cuda.cpp`, `Makefile`
 
 
 

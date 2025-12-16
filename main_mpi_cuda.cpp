@@ -14,6 +14,16 @@
 #include <thrust/device_ptr.h>
 #include <thrust/execution_policy.h>
 
+// CUDA error checking macro
+#define CUDA_CHECK(call) \
+    do { \
+        cudaError_t err = call; \
+        if (err != cudaSuccess) { \
+            std::cerr << "CUDA error at " << __FILE__ << ":" << __LINE__ << " - " << cudaGetErrorString(err) << std::endl; \
+            exit(1); \
+        } \
+    } while(0)
+
 struct Point {
     double x, y;
     Point(double x = 0, double y = 0) : x(x), y(y) {}
@@ -246,7 +256,7 @@ ProcessTopology2D init_topology_2d(int M, int N, int rank, int size) {
     return topo;
 }
 
-// CUDA device functions
+
 __device__ bool in_trapezoid_device(double x, double y) {
     const double TOL = 1e-8;
     double x_left, x_right;
@@ -270,7 +280,7 @@ __device__ bool in_trapezoid_device(double x, double y) {
     return fmin(x_left, x_right) <= x && x <= fmax(x_left, x_right);
 }
 
-// CUDA kernel: вычисление коэффициентов k_coeffs
+// вычисление коэффициентов k_coeffs
 __global__ void compute_k_coeffs_kernel(double* k_coeffs, char* mask, int rows, int cols, double eps) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int total = rows * cols;
@@ -280,7 +290,7 @@ __global__ void compute_k_coeffs_kernel(double* k_coeffs, char* mask, int rows, 
     }
 }
 
-// CUDA kernel: применение оператора A
+// применение оператора A
 __global__ void apply_A_kernel(double* Aw, const double* w, const char* mask, const char* border_mask,
                                const double* a_coeffs, const double* b_coeffs,
                                int rows, int cols, double hx, double hy,
@@ -321,7 +331,7 @@ __global__ void apply_A_kernel(double* Aw, const double* w, const char* mask, co
     }
 }
 
-// CUDA kernel: решение системы с предобуславливателем D
+// решение системы с предобуславливателем D
 __global__ void solve_D_kernel(double* z, const double* prec, const char* mask, const char* border_mask,
                                const double* a_coeffs, const double* b_coeffs,
                                int rows, int cols, double hx, double hy,
@@ -541,7 +551,116 @@ void exchange_boundaries_2d(Grid2D& grid, const ProcessTopology2D& topo,
     timing.comm_time += MPI_Wtime() - comm_start;
 }
 
-// Вычисление коэффициентов на CPU (для setup)
+void exchange_boundaries_2d_cuda(double* d_w, const ProcessTopology2D& topo,
+                                 ExchangeBuffers& buffers, MPI_Comm comm, TimingInfo& timing,
+                                 int rows, int cols) {
+    double comm_start = MPI_Wtime();
+    MPI_Status status;
+    
+    int rank_up = -1, rank_down = -1, rank_left = -1, rank_right = -1;
+    
+    if (topo.rank_y > 0) {
+        rank_up = (topo.rank_y - 1) * topo.px + topo.rank_x;
+    }
+    if (topo.rank_y < topo.py - 1) {
+        rank_down = (topo.rank_y + 1) * topo.px + topo.rank_x;
+    }
+    if (topo.rank_x > 0) {
+        rank_left = topo.rank_y * topo.px + (topo.rank_x - 1);
+    }
+    if (topo.rank_x < topo.px - 1) {
+        rank_right = topo.rank_y * topo.px + (topo.rank_x + 1);
+    }
+    
+    // Буферы для граничных данных на CPU
+    std::vector<double> send_buf_up(cols), recv_buf_up(cols);
+    std::vector<double> send_buf_down(cols), recv_buf_down(cols);
+    std::vector<double> send_buf_left(rows), recv_buf_left(rows);
+    std::vector<double> send_buf_right(rows), recv_buf_right(rows);
+    
+    // Обмен с верхним соседом
+    if (rank_up >= 0) {
+        int send_row = (topo.rank_y > 0) ? 1 : 0;
+        int recv_row = 0;
+        double t1 = MPI_Wtime();
+        CUDA_CHECK(cudaMemcpy(send_buf_up.data(), &d_w[send_row * cols], cols * sizeof(double), cudaMemcpyDeviceToHost));
+        timing.copy_from_gpu_time += MPI_Wtime() - t1;
+        
+        MPI_Sendrecv(send_buf_up.data(), cols, MPI_DOUBLE, rank_up, 0,
+                     recv_buf_up.data(), cols, MPI_DOUBLE, rank_up, 1,
+                     comm, &status);
+        
+        double t2 = MPI_Wtime();
+        CUDA_CHECK(cudaMemcpy(&d_w[recv_row * cols], recv_buf_up.data(), cols * sizeof(double), cudaMemcpyHostToDevice));
+        timing.copy_to_gpu_time += MPI_Wtime() - t2;
+    }
+    
+    // Обмен с нижним соседом
+    if (rank_down >= 0) {
+        int send_row = rows - ((topo.rank_y < topo.py - 1) ? 2 : 1);
+        int recv_row = rows - 1;
+        double t1 = MPI_Wtime();
+        CUDA_CHECK(cudaMemcpy(send_buf_down.data(), &d_w[send_row * cols], cols * sizeof(double), cudaMemcpyDeviceToHost));
+        timing.copy_from_gpu_time += MPI_Wtime() - t1;
+        
+        MPI_Sendrecv(send_buf_down.data(), cols, MPI_DOUBLE, rank_down, 1,
+                     recv_buf_down.data(), cols, MPI_DOUBLE, rank_down, 0,
+                     comm, &status);
+        
+        double t2 = MPI_Wtime();
+        CUDA_CHECK(cudaMemcpy(&d_w[recv_row * cols], recv_buf_down.data(), cols * sizeof(double), cudaMemcpyHostToDevice));
+        timing.copy_to_gpu_time += MPI_Wtime() - t2;
+    }
+    
+    // Обмен с левым соседом
+    if (rank_left >= 0) {
+        int send_col = (topo.rank_x > 0) ? 1 : 0;
+        int recv_col = 0;
+        double t1 = MPI_Wtime();
+        for (int i = 0; i < rows; ++i) {
+            CUDA_CHECK(cudaMemcpy(&send_buf_left[i], &d_w[i * cols + send_col], sizeof(double), cudaMemcpyDeviceToHost));
+        }
+        timing.copy_from_gpu_time += MPI_Wtime() - t1;
+        
+        MPI_Sendrecv(send_buf_left.data(), rows, MPI_DOUBLE, rank_left, 2,
+                     recv_buf_left.data(), rows, MPI_DOUBLE, rank_left, 3,
+                     comm, &status);
+        
+        // Копируем обратно на GPU
+        double t2 = MPI_Wtime();
+        for (int i = 0; i < rows; ++i) {
+            CUDA_CHECK(cudaMemcpy(&d_w[i * cols + recv_col], &recv_buf_left[i], sizeof(double), cudaMemcpyHostToDevice));
+        }
+        timing.copy_to_gpu_time += MPI_Wtime() - t2;
+    }
+    
+    // Обмен с правым соседом
+    if (rank_right >= 0) {
+        int send_col = cols - ((topo.rank_x < topo.px - 1) ? 2 : 1);
+        int recv_col = cols - 1;
+        // Копируем столбец с GPU построчно
+        double t1 = MPI_Wtime();
+        for (int i = 0; i < rows; ++i) {
+            CUDA_CHECK(cudaMemcpy(&send_buf_right[i], &d_w[i * cols + send_col], sizeof(double), cudaMemcpyDeviceToHost));
+        }
+        timing.copy_from_gpu_time += MPI_Wtime() - t1;
+        
+        MPI_Sendrecv(send_buf_right.data(), rows, MPI_DOUBLE, rank_right, 3,
+                     recv_buf_right.data(), rows, MPI_DOUBLE, rank_right, 2,
+                     comm, &status);
+        
+        // Копируем обратно на GPU
+        double t2 = MPI_Wtime();
+        for (int i = 0; i < rows; ++i) {
+            CUDA_CHECK(cudaMemcpy(&d_w[i * cols + recv_col], &recv_buf_right[i], sizeof(double), cudaMemcpyHostToDevice));
+        }
+        timing.copy_to_gpu_time += MPI_Wtime() - t2;
+    }
+    
+    timing.comm_time += MPI_Wtime() - comm_start;
+}
+
+// Вычисление коэффициентов
 double compute_a_ij(double x_half, double y_j_minus_half, double y_j_plus_half, 
                    double h2, double eps) {
     const int num_check_points = 5;
@@ -752,13 +871,10 @@ std::pair<Grid2D, int> conjugate_gradient_2d_cuda(
     timing.copy_to_gpu_time += MPI_Wtime() - copy_start;
     
     // Обмен границами перед началом
-    Grid2D w_host = U0;
     ExchangeBuffers exchange_buffers(rows);
-    exchange_boundaries_2d(w_host, topo, exchange_buffers, MPI_COMM_WORLD, timing);
-    flatten_grid(w_host, flat_w.data());
-    CUDA_CHECK(cudaMemcpy(d_w, flat_w.data(), total_size * sizeof(double), cudaMemcpyHostToDevice));
+    exchange_boundaries_2d_cuda(d_w, topo, exchange_buffers, MPI_COMM_WORLD, timing, rows, cols);
     
-    // Вычисляем Aw0 на GPU
+
     int compute_size = (end_i - start_i) * (end_j - start_j);
     int threads_per_block = 256;
     int num_blocks = (compute_size + threads_per_block - 1) / threads_per_block;
@@ -845,18 +961,8 @@ std::pair<Grid2D, int> conjugate_gradient_2d_cuda(
         }
         
 
-        copy_start = MPI_Wtime();
-        CUDA_CHECK(cudaMemcpy(flat_w.data(), d_p, total_size * sizeof(double), cudaMemcpyDeviceToHost));
-        unflatten_grid(flat_w.data(), w_host);
-        timing.copy_from_gpu_time += MPI_Wtime() - copy_start;
-        
- 
-        exchange_boundaries_2d(w_host, topo, exchange_buffers, MPI_COMM_WORLD, timing);
-        
-        copy_start = MPI_Wtime();
-        flatten_grid(w_host, flat_w.data());
-        CUDA_CHECK(cudaMemcpy(d_p, flat_w.data(), total_size * sizeof(double), cudaMemcpyHostToDevice));
-        timing.copy_to_gpu_time += MPI_Wtime() - copy_start;
+        // Оптимизированный обмен границами для p: копируем только граничные области
+        exchange_boundaries_2d_cuda(d_p, topo, exchange_buffers, MPI_COMM_WORLD, timing, rows, cols);
         
         op_start = MPI_Wtime();
         apply_A_kernel<<<num_blocks, threads_per_block>>>(
@@ -898,19 +1004,8 @@ std::pair<Grid2D, int> conjugate_gradient_2d_cuda(
         timing.update_vectors_time += MPI_Wtime() - op_start;
         timing.compute_time += MPI_Wtime() - op_start;
         
-        copy_start = MPI_Wtime();
-        CUDA_CHECK(cudaMemcpy(flat_w.data(), d_w, total_size * sizeof(double), cudaMemcpyDeviceToHost));
-        unflatten_grid(flat_w.data(), w_host);
-        timing.copy_from_gpu_time += MPI_Wtime() - copy_start;
-        
-
-        exchange_boundaries_2d(w_host, topo, exchange_buffers, MPI_COMM_WORLD, timing);
-        
-
-        copy_start = MPI_Wtime();
-        flatten_grid(w_host, flat_w.data());
-        CUDA_CHECK(cudaMemcpy(d_w, flat_w.data(), total_size * sizeof(double), cudaMemcpyHostToDevice));
-        timing.copy_to_gpu_time += MPI_Wtime() - copy_start;
+        // Оптимизированный обмен границами: копируем только граничные области, а не весь массив
+        exchange_boundaries_2d_cuda(d_w, topo, exchange_buffers, MPI_COMM_WORLD, timing, rows, cols);
         
 
         op_start = MPI_Wtime();
@@ -1282,4 +1377,5 @@ int main(int argc, char* argv[]) {
     MPI_Finalize();
     return 0;
 }
+
 

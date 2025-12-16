@@ -62,7 +62,7 @@ mpic++ -fopenmp -O3 -o main_hybrid main_hybrid.cpp
 
 ```bash
 module load SpectrumMPI
-module load CUDA
+module load OpenMPI/4.0.2
 make ARCH=sm_60 HOST_COMP=mpicc  # для GPU с compute capability 6.0
 # или
 make ARCH=sm_35 HOST_COMP=mpicc  # для GPU с compute capability 3.5
